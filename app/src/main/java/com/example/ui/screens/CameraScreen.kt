@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,15 +32,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.FiberManualRecord
-import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.FlashlightOff
 import androidx.compose.material.icons.filled.FlashlightOn
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.ZoomIn
-import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,7 +50,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -81,8 +82,10 @@ import com.example.camera.CameraManager
 import com.example.camera.CctvCameraService
 import com.example.data.model.CameraQuality
 import com.example.data.model.CameraTelemetry
+import com.example.data.model.MotionAlertEvent
 import com.example.data.model.QrPairingPayload
 import com.example.data.model.RemoteAction
+import com.example.data.model.SirenType
 import com.example.motion.MotionDetectionEngine
 import com.example.network.NetworkUtils
 import com.example.network.pairing.QrPairingManager
@@ -91,6 +94,7 @@ import com.example.recording.LocalRecorder
 import com.example.ui.components.CctvTopBar
 import com.example.ui.components.HudOverlay
 import com.example.ui.components.QrBitmapImage
+import com.example.ui.components.SirenSelectorBottomSheet
 import com.example.ui.components.StatusBadge
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.BorderColor
@@ -102,6 +106,7 @@ import com.example.ui.theme.SecurityGreen
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.WarningAmber
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -128,7 +133,6 @@ fun CameraScreen(
     val deviceId = remember { NetworkUtils.getDeviceId(context) }
     val cameraName = "TwinGuard Cam #1"
 
-    // Permissions check
     var hasPermissions by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED &&
@@ -155,38 +159,76 @@ fun CameraScreen(
         }
     }
 
-    // State
+    // Camera & Stream States
     var isTorchOn by remember { mutableStateOf(false) }
+    var isStrobeOn by remember { mutableStateOf(false) }
     var isFrontCamera by remember { mutableStateOf(false) }
     var currentZoom by remember { mutableFloatStateOf(1f) }
     var isRecording by remember { mutableStateOf(false) }
     var recordingDurationSec by remember { mutableLongStateOf(0L) }
     var isMotionDetected by remember { mutableStateOf(false) }
+    var isHumanMotion by remember { mutableStateOf(false) }
+    var autoClipCountdown by remember { mutableIntStateOf(0) }
     var currentQuality by remember { mutableStateOf(CameraQuality.BALANCED) }
+    var isStealthScreenOff by remember { mutableStateOf(false) }
+    var isPrivacyMode by remember { mutableStateOf(false) }
+    var isNightVision by remember { mutableStateOf(false) }
+
     var showQrSheet by remember { mutableStateOf(false) }
+    var showSirenSheet by remember { mutableStateOf(false) }
     var connectedClients by remember { mutableIntStateOf(0) }
 
     var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
     var cameraManagerRef by remember { mutableStateOf<CameraManager?>(null) }
     var localServerRef by remember { mutableStateOf<LocalCctvServer?>(null) }
 
-    // Recording file tracking
     var currentRecordingFile by remember { mutableStateOf<File?>(null) }
     var recordingStartTime by remember { mutableLongStateOf(0L) }
+    var tenSecRecordJob by remember { mutableStateOf<Job?>(null) }
 
-    // Motion Detection Engine
+    // Human motion 10-second automatic clip recording trigger
+    fun trigger10SecondClip(isHuman: Boolean) {
+        tenSecRecordJob?.cancel()
+        tenSecRecordJob = scope.launch {
+            isRecording = true
+            recordingStartTime = System.currentTimeMillis()
+            val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+            val file = File(localRecorder.recordingsDir, "CLIP10S_${ts}.mp4")
+            currentRecordingFile = file
+
+            for (sec in 10 downTo 1) {
+                autoClipCountdown = sec
+                delay(1000)
+            }
+            autoClipCountdown = 0
+            isRecording = false
+            localRecorder.registerRecording(
+                file = file,
+                title = if (isHuman) "Human Intruder Clip" else "Motion Event Clip",
+                durationSeconds = 10,
+                isMotionEvent = true,
+                resolution = currentQuality.label
+            )
+        }
+    }
+
+    // Motion Detection Engine with Human Silhouette Detection
     val motionEngine = remember {
-        MotionDetectionEngine { score, zone, snapshotBytes ->
+        MotionDetectionEngine { score, zone, isHuman, snapshotBytes ->
             isMotionDetected = true
+            isHumanMotion = isHuman
+
             scope.launch {
                 localRecorder.recordMotionEvent(snapshotBytes, score, zone)
-                delay(3000)
+                trigger10SecondClip(isHuman)
+                delay(4000)
                 isMotionDetected = false
+                isHumanMotion = false
             }
         }
     }
 
-    // Telemetry Provider lambda
+    // Telemetry Provider
     val telemetryProvider = {
         val (freeMb, totalMb) = localRecorder.getStorageStats()
         CameraTelemetry(
@@ -205,20 +247,26 @@ fun CameraScreen(
             connectedClients = connectedClients,
             isRecording = isRecording,
             isTorchOn = isTorchOn,
+            isStrobeActive = isStrobeOn,
             isFrontCamera = isFrontCamera,
             isMotionDetected = isMotionDetected,
+            isHumanMotion = isHumanMotion,
             recordingDurationSec = recordingDurationSec,
+            autoClipCountdownSec = autoClipCountdown,
             cameraName = cameraName,
             quality = currentQuality,
+            zoomLevel = currentZoom,
+            activeSiren = audioManager.currentSirenType,
+            isPrivacyMode = isPrivacyMode,
+            isNightVision = isNightVision,
             serverIp = localIp,
             serverPort = serverPort
         )
     }
 
-    // Start Local Server & Foreground Service
+    // Initialize Local Server & 24/7 Foreground Service
     LaunchedEffect(hasPermissions) {
         if (hasPermissions) {
-            // Start Foreground Service
             val serviceIntent = Intent(context, CctvCameraService::class.java).apply {
                 putExtra("camera_name", cameraName)
                 putExtra("server_ip", localIp)
@@ -230,7 +278,6 @@ fun CameraScreen(
                 context.startService(serviceIntent)
             }
 
-            // Start Local HTTP/MJPEG Server
             val server = LocalCctvServer(
                 port = serverPort,
                 authToken = sessionToken,
@@ -242,6 +289,13 @@ fun CameraScreen(
                             RemoteAction.TOGGLE_TORCH -> {
                                 cameraManagerRef?.let {
                                     isTorchOn = it.toggleTorch()
+                                    isStrobeOn = false
+                                }
+                            }
+                            RemoteAction.TOGGLE_STROBE -> {
+                                cameraManagerRef?.let {
+                                    isStrobeOn = it.toggleStrobe()
+                                    isTorchOn = false
                                 }
                             }
                             RemoteAction.SWITCH_CAMERA -> {
@@ -257,6 +311,22 @@ fun CameraScreen(
                                 cameraManagerRef?.zoomOut()
                                 currentZoom = cameraManagerRef?.getZoomRatio() ?: 1f
                             }
+                            RemoteAction.SET_ZOOM_1X -> {
+                                cameraManagerRef?.setZoom(1.0f)
+                                currentZoom = 1.0f
+                            }
+                            RemoteAction.SET_ZOOM_2X -> {
+                                cameraManagerRef?.setZoom(2.0f)
+                                currentZoom = 2.0f
+                            }
+                            RemoteAction.SET_ZOOM_3X -> {
+                                cameraManagerRef?.setZoom(3.0f)
+                                currentZoom = 3.0f
+                            }
+                            RemoteAction.SET_ZOOM_5X -> {
+                                cameraManagerRef?.setZoom(5.0f)
+                                currentZoom = 5.0f
+                            }
                             RemoteAction.START_RECORDING -> {
                                 if (!isRecording) {
                                     isRecording = true
@@ -269,7 +339,6 @@ fun CameraScreen(
                                 if (isRecording) {
                                     isRecording = false
                                     currentRecordingFile?.let { file ->
-                                        // Finalize recording metadata
                                         localRecorder.registerRecording(
                                             file = file,
                                             title = "Manual Recording",
@@ -280,11 +349,26 @@ fun CameraScreen(
                                     recordingDurationSec = 0L
                                 }
                             }
-                            RemoteAction.CAPTURE_SNAPSHOT -> {
-                                Toast.makeText(context, "Snapshot captured by remote viewer", Toast.LENGTH_SHORT).show()
+                            RemoteAction.RECORD_10S_CLIP -> {
+                                trigger10SecondClip(isHuman = false)
                             }
-                            RemoteAction.TRIGGER_SIREN -> {
-                                audioManager.playSirenSound(3)
+                            RemoteAction.CAPTURE_SNAPSHOT -> {
+                                Toast.makeText(context, "Snapshot captured", Toast.LENGTH_SHORT).show()
+                            }
+                            RemoteAction.TRIGGER_SIREN_1 -> audioManager.playSiren(SirenType.POLICE_WAIL, 5)
+                            RemoteAction.TRIGGER_SIREN_2 -> audioManager.playSiren(SirenType.RAPID_YELP, 5)
+                            RemoteAction.TRIGGER_SIREN_3 -> audioManager.playSiren(SirenType.AMBULANCE_TWO_TONE, 5)
+                            RemoteAction.TRIGGER_SIREN_4 -> audioManager.playSiren(SirenType.PIERCING_INTRUDER, 5)
+                            RemoteAction.TRIGGER_SIREN_5 -> audioManager.playSiren(SirenType.AIR_RAID_RUMBLE, 5)
+                            RemoteAction.TRIGGER_SIREN_6 -> audioManager.playSiren(SirenType.CYBER_STROBE, 5)
+                            RemoteAction.TRIGGER_SIREN_7 -> audioManager.playSiren(SirenType.GUARD_DOG_BURST, 5)
+                            RemoteAction.TRIGGER_SIREN_8 -> audioManager.playSiren(SirenType.ULTRASONIC_DETERRENT, 5)
+                            RemoteAction.STOP_SIREN -> audioManager.stopSiren()
+                            RemoteAction.TOGGLE_PRIVACY_MODE -> {
+                                isPrivacyMode = cameraManagerRef?.togglePrivacyMode() ?: false
+                            }
+                            RemoteAction.TOGGLE_NIGHT_VISION -> {
+                                isNightVision = cameraManagerRef?.toggleNightVision() ?: false
                             }
                             RemoteAction.SET_QUALITY_LOW -> {
                                 currentQuality = CameraQuality.LOW
@@ -306,10 +390,9 @@ fun CameraScreen(
             server.start()
             localServerRef = server
 
-            // Polling connected client count & recording timer
             while (isActive) {
                 connectedClients = server.getConnectedClientCount()
-                if (isRecording) {
+                if (isRecording && autoClipCountdown == 0) {
                     recordingDurationSec = (System.currentTimeMillis() - recordingStartTime) / 1000
                 }
                 delay(1000)
@@ -317,13 +400,11 @@ fun CameraScreen(
         }
     }
 
-    // Cleanup when leaving
     DisposableEffect(Unit) {
         onDispose {
             localServerRef?.stop()
             cameraManagerRef?.release()
             audioManager.release()
-            // Stop foreground service
             val stopIntent = Intent(context, CctvCameraService::class.java).apply {
                 action = CctvCameraService.ACTION_STOP
             }
@@ -338,36 +419,40 @@ fun CameraScreen(
     Scaffold(
         containerColor = DarkBackground,
         topBar = {
-            CctvTopBar(
-                title = "Camera Mode — Active",
-                subtitle = "http://$localIp:$serverPort",
-                onBack = onNavigateBack,
-                actions = {
-                    StatusBadge(
-                        text = if (connectedClients > 0) "$connectedClients ONLINE" else "READY",
-                        color = if (connectedClients > 0) SecurityGreen else AccentCyan
-                    )
-                    IconButton(
-                        onClick = { showQrSheet = true },
-                        modifier = Modifier.testTag("camera_qr_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.QrCode,
-                            contentDescription = "Show QR",
-                            tint = Color.White
+            if (!isStealthScreenOff) {
+                CctvTopBar(
+                    title = "Camera Mode",
+                    subtitle = "http://$localIp:$serverPort",
+                    onBack = onNavigateBack,
+                    actions = {
+                        StatusBadge(
+                            text = if (connectedClients > 0) "$connectedClients ONLINE" else "READY",
+                            color = if (connectedClients > 0) SecurityGreen else AccentCyan
                         )
+                        IconButton(
+                            onClick = { showSirenSheet = true },
+                            modifier = Modifier.testTag("open_siren_sheet")
+                        ) {
+                            Icon(Icons.Default.VolumeUp, contentDescription = "8 Sirens", tint = WarningAmber)
+                        }
+                        IconButton(
+                            onClick = { showQrSheet = true },
+                            modifier = Modifier.testTag("camera_qr_button")
+                        ) {
+                            Icon(Icons.Default.QrCode, contentDescription = "Show QR", tint = Color.White)
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(if (isStealthScreenOff) PaddingValues(0.dp) else padding)
         ) {
             if (hasPermissions) {
-                // Camera Viewfinder
+                // Live Viewfinder
                 AndroidView(
                     factory = { ctx ->
                         val previewView = PreviewView(ctx).apply {
@@ -393,180 +478,206 @@ fun CameraScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // HUD Overlay (Diagnostics, Recording Indicator, Motion Alert)
-                HudOverlay(
-                    telemetry = telemetryProvider(),
-                    isRecording = isRecording,
-                    recordingDurationSec = recordingDurationSec,
-                    modifier = Modifier.align(Alignment.TopCenter)
-                )
-
-                // Laptop URL quick indicator banner
-                Surface(
-                    color = DarkSurface.copy(alpha = 0.85f),
-                    shape = RoundedCornerShape(10.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                // Human Motion Detected Banner
+                AnimatedVisibility(
+                    visible = isHumanMotion,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 64.dp)
+                        .padding(top = 12.dp)
                 ) {
-                    Text(
-                        text = "Laptop Viewer: http://$localIp:$serverPort?token=$sessionToken",
-                        color = AccentCyan,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
-                }
-
-                // On-Screen Camera Controls Bar
-                Surface(
-                    color = DarkSurface.copy(alpha = 0.92f),
-                    shape = RoundedCornerShape(20.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(horizontal = 16.dp, vertical = 20.dp)
-                        .fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
+                    Surface(
+                        color = SecurityAlertRed,
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     ) {
-                        // Torch Toggle
-                        IconButton(
-                            onClick = {
-                                cameraManagerRef?.let {
-                                    isTorchOn = it.toggleTorch()
-                                }
-                            },
-                            modifier = Modifier.testTag("btn_torch")
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(
-                                imageVector = if (isTorchOn) Icons.Default.FlashlightOn else Icons.Default.FlashlightOff,
-                                contentDescription = "Torch",
-                                tint = if (isTorchOn) WarningAmber else Color.White
-                            )
-                        }
-
-                        // Switch Camera Lens
-                        IconButton(
-                            onClick = {
-                                cameraManagerRef?.let {
-                                    isFrontCamera = it.switchCamera(lifecycleOwner, previewViewRef)
-                                }
-                            },
-                            modifier = Modifier.testTag("btn_switch_cam")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Cameraswitch,
-                                contentDescription = "Switch Camera",
-                                tint = Color.White
-                            )
-                        }
-
-                        // Record Button (Hero)
-                        IconButton(
-                            onClick = {
-                                if (isRecording) {
-                                    isRecording = false
-                                    Toast.makeText(context, "Recording saved", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    isRecording = true
-                                    recordingStartTime = System.currentTimeMillis()
-                                    Toast.makeText(context, "Recording started", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(if (isRecording) SecurityAlertRed else AccentCyan)
-                                .testTag("btn_record")
-                        ) {
-                            Icon(
-                                imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.FiberManualRecord,
-                                contentDescription = if (isRecording) "Stop Record" else "Start Record",
-                                tint = if (isRecording) Color.White else Color.Black,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-
-                        // Manual Snapshot
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    Toast.makeText(context, "Snapshot saved to Screenshots", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            modifier = Modifier.testTag("btn_snapshot")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PhotoCamera,
-                                contentDescription = "Take Snapshot",
-                                tint = Color.White
-                            )
-                        }
-
-                        // Siren Alarm
-                        IconButton(
-                            onClick = {
-                                audioManager.playSirenSound(3)
-                                Toast.makeText(context, "Siren triggered", Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier.testTag("btn_siren")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.VolumeUp,
-                                contentDescription = "Trigger Siren",
-                                tint = SecurityAlertRed
+                            Icon(Icons.Default.Warning, contentDescription = "Alert", tint = Color.White)
+                            Text(
+                                text = "HUMAN MOTION DETECTED • RECORDING 10S CLIP ($autoClipCountdown)",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
                             )
                         }
                     }
                 }
-            } else {
-                // Permission Denied UI
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "Camera & Microphone Required",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold
+
+                // HUD Overlay
+                if (!isStealthScreenOff) {
+                    HudOverlay(
+                        telemetry = telemetryProvider(),
+                        isRecording = isRecording,
+                        recordingDurationSec = if (autoClipCountdown > 0) autoClipCountdown.toLong() else recordingDurationSec,
+                        modifier = Modifier.align(Alignment.TopCenter)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "TwinGuard CCTV requires camera and audio permissions to stream locally without internet.",
-                        color = TextSecondary,
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Button(
-                        onClick = {
-                            val perms = mutableListOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                perms.add(Manifest.permission.POST_NOTIFICATIONS)
-                            }
-                            permissionLauncher.launch(perms.toTypedArray())
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentCyan),
-                        modifier = Modifier.testTag("request_camera_perm_button")
+                }
+
+                // Material You Expressive Floating Control Island
+                if (!isStealthScreenOff) {
+                    Surface(
+                        color = DarkSurface.copy(alpha = 0.94f),
+                        shape = RoundedCornerShape(28.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(horizontal = 16.dp, vertical = 20.dp)
+                            .fillMaxWidth()
                     ) {
-                        Text("Grant Permissions", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            // Zoom Presets
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                listOf(1.0f to "1x", 2.0f to "2x", 3.0f to "3x", 5.0f to "5x").forEach { (zoom, label) ->
+                                    Surface(
+                                        color = if (currentZoom == zoom) AccentCyan else DarkSurfaceElevated,
+                                        shape = RoundedCornerShape(16.dp),
+                                        modifier = Modifier
+                                            .clickable {
+                                                cameraManagerRef?.setZoom(zoom)
+                                                currentZoom = zoom
+                                            }
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (currentZoom == zoom) Color.Black else TextPrimary,
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Main Action Buttons
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Torch & Strobe
+                                IconButton(
+                                    onClick = {
+                                        cameraManagerRef?.let {
+                                            isTorchOn = it.toggleTorch()
+                                            isStrobeOn = false
+                                        }
+                                    },
+                                    modifier = Modifier.testTag("btn_torch")
+                                ) {
+                                    Icon(
+                                        imageVector = if (isTorchOn) Icons.Default.FlashlightOn else Icons.Default.FlashlightOff,
+                                        contentDescription = "Torch",
+                                        tint = if (isTorchOn) WarningAmber else Color.White
+                                    )
+                                }
+
+                                // Switch Camera
+                                IconButton(
+                                    onClick = {
+                                        cameraManagerRef?.let {
+                                            isFrontCamera = it.switchCamera(lifecycleOwner, previewViewRef)
+                                        }
+                                    },
+                                    modifier = Modifier.testTag("btn_switch_cam")
+                                ) {
+                                    Icon(Icons.Default.Cameraswitch, contentDescription = "Flip", tint = Color.White)
+                                }
+
+                                // Central Hero Record Button
+                                IconButton(
+                                    onClick = {
+                                        if (isRecording) {
+                                            isRecording = false
+                                            tenSecRecordJob?.cancel()
+                                        } else {
+                                            trigger10SecondClip(isHuman = false)
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isRecording) SecurityAlertRed else AccentCyan)
+                                        .testTag("btn_record")
+                                ) {
+                                    Icon(
+                                        imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.FiberManualRecord,
+                                        contentDescription = "Record",
+                                        tint = if (isRecording) Color.White else Color.Black,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+
+                                // 8 Sirens Sheet Button
+                                IconButton(
+                                    onClick = { showSirenSheet = true },
+                                    modifier = Modifier.testTag("btn_sirens")
+                                ) {
+                                    Icon(Icons.Default.VolumeUp, contentDescription = "Sirens", tint = WarningAmber)
+                                }
+
+                                // 24/7 Stealth Screen-Off Mode
+                                IconButton(
+                                    onClick = { isStealthScreenOff = true },
+                                    modifier = Modifier.testTag("btn_stealth_mode")
+                                ) {
+                                    Icon(Icons.Default.VisibilityOff, contentDescription = "Stealth Mode", tint = Color.White)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Stealth Screen-Off Overlay (OLED black, running 24/7 in background without burning screen)
+                if (isStealthScreenOff) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black)
+                            .clickable { isStealthScreenOff = false },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "24/7 STEALTH STREAM ACTIVE",
+                                color = AccentCyan.copy(alpha = 0.5f),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Tap anywhere to wake display",
+                                color = Color.White.copy(alpha = 0.3f),
+                                fontSize = 11.sp
+                            )
+                        }
                     }
                 }
             }
         }
     }
 
-    // Modal Bottom Sheet: Dynamic QR Code Pairing
+    // Siren Selector Bottom Sheet
+    if (showSirenSheet) {
+        SirenSelectorBottomSheet(
+            onSelectSiren = { siren ->
+                audioManager.playSiren(siren, 6)
+                showSirenSheet = false
+            },
+            onStopSiren = { audioManager.stopSiren() },
+            onDismiss = { showSirenSheet = false }
+        )
+    }
+
+    // Dynamic QR Modal Sheet
     if (showQrSheet) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val payload = remember {
@@ -576,7 +687,7 @@ fun CameraScreen(
                 ip = localIp,
                 port = serverPort,
                 token = sessionToken,
-                expiresAt = System.currentTimeMillis() + (30 * 60 * 1000) // 30 mins
+                expiresAt = System.currentTimeMillis() + (30 * 60 * 1000)
             )
         }
         val qrString = remember { QrPairingManager.createPayloadString(payload) }
@@ -585,7 +696,8 @@ fun CameraScreen(
         ModalBottomSheet(
             onDismissRequest = { showQrSheet = false },
             sheetState = sheetState,
-            containerColor = DarkSurface
+            containerColor = DarkSurface,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -600,53 +712,35 @@ fun CameraScreen(
                     color = AccentCyan,
                     letterSpacing = 1.sp
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Scan this QR with Phone B in Monitor Mode, or enter the URL below in Chrome on your laptop.",
-                    fontSize = 13.sp,
-                    color = TextSecondary,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
+                Spacer(modifier = Modifier.height(14.dp))
                 if (qrBitmap != null) {
                     QrBitmapImage(bitmap = qrBitmap)
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
+                Spacer(modifier = Modifier.height(14.dp))
                 Surface(
                     color = DarkSurfaceElevated,
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(14.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text("DIRECT BROWSER URL", fontSize = 10.sp, color = TextSecondary, fontWeight = FontWeight.Bold)
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text("DIRECT LAPTOP URL", fontSize = 10.sp, color = TextSecondary, fontWeight = FontWeight.Bold)
                         Text(
                             text = "http://$localIp:$serverPort?token=$sessionToken",
                             fontSize = 13.sp,
                             color = AccentCyan,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Token: $sessionToken • Valid 30 mins",
-                            fontSize = 11.sp,
-                            color = WarningAmber
-                        )
                     }
                 }
-
                 Spacer(modifier = Modifier.height(16.dp))
-
                 Button(
                     onClick = { showQrSheet = false },
                     colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceElevated),
+                    shape = RoundedCornerShape(20.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Close Pairing Code", color = TextPrimary)
+                    Text("Close", color = TextPrimary)
                 }
             }
         }

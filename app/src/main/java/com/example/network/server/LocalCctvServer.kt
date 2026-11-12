@@ -224,10 +224,15 @@ class LocalCctvServer(
             put("connectedClients", telemetry.connectedClients)
             put("isRecording", telemetry.isRecording)
             put("isTorchOn", telemetry.isTorchOn)
+            put("isStrobeActive", telemetry.isStrobeActive)
             put("isFrontCamera", telemetry.isFrontCamera)
             put("isMotionDetected", telemetry.isMotionDetected)
+            put("isHumanMotion", telemetry.isHumanMotion)
+            put("zoomLevel", telemetry.zoomLevel.toDouble())
+            put("isPrivacyMode", telemetry.isPrivacyMode)
             put("recordingDurationSec", telemetry.recordingDurationSec)
             put("quality", telemetry.quality.label)
+            put("activeSiren", telemetry.activeSiren?.title ?: "")
         }
         val bytes = json.toString().toByteArray(Charsets.UTF_8)
         val response = "HTTP/1.1 200 OK\r\n" +

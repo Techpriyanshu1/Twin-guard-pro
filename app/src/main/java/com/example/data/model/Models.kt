@@ -13,6 +13,28 @@ enum class ConnectionType(val label: String) {
     MANUAL_IP("Manual LAN IP")
 }
 
+enum class SirenType(val id: Int, val title: String, val subtitle: String) {
+    POLICE_WAIL(1, "Police Wail", "600Hz–1400Hz frequency sweep"),
+    RAPID_YELP(2, "Rapid Yelp", "Urgent fast-pulsed alarm"),
+    AMBULANCE_TWO_TONE(3, "Hi-Lo Two Tone", "European emergency alternating tone"),
+    PIERCING_INTRUDER(4, "Piercing Intruder", "2200Hz high decibel deterrence blast"),
+    AIR_RAID_RUMBLE(5, "Air Raid Warning", "Deep rising disaster siren"),
+    CYBER_STROBE(6, "Cyber Alarm", "Rapid frequency chirp pattern"),
+    GUARD_DOG_BURST(7, "Guard Pulse", "Aggressive low-frequency thumping"),
+    ULTRASONIC_DETERRENT(8, "Ultrasonic Chirp", "3200Hz high-pitch intrusion deter")
+}
+
+data class MotionAlertEvent(
+    val id: Long = System.currentTimeMillis(),
+    val timestamp: Long = System.currentTimeMillis(),
+    val confidence: Int = 85,
+    val zone: String = "Full Frame",
+    val snapshotUri: String? = null,
+    val videoClipUri: String? = null,
+    val isHuman: Boolean = true,
+    val message: String = "Human intruder motion detected"
+)
+
 data class CameraTelemetry(
     val batteryPercent: Int = 100,
     val isCharging: Boolean = false,
@@ -25,12 +47,20 @@ data class CameraTelemetry(
     val connectedClients: Int = 0,
     val isRecording: Boolean = false,
     val isTorchOn: Boolean = false,
+    val isStrobeActive: Boolean = false,
     val isFrontCamera: Boolean = false,
     val isMotionDetected: Boolean = false,
     val motionScore: Int = 0,
+    val isHumanMotion: Boolean = false,
     val recordingDurationSec: Long = 0L,
+    val autoClipCountdownSec: Int = 0,
     val cameraName: String = "TwinGuard Cam 1",
     val quality: CameraQuality = CameraQuality.BALANCED,
+    val zoomLevel: Float = 1.0f,
+    val activeSiren: SirenType? = null,
+    val isPrivacyMode: Boolean = false,
+    val isNightVision: Boolean = false,
+    val latestAlert: MotionAlertEvent? = null,
     val serverIp: String = "127.0.0.1",
     val serverPort: Int = 8080
 )
@@ -48,22 +78,39 @@ data class QrPairingPayload(
 
 data class MotionZoneConfig(
     val sensitivity: Int = 50, // 1 to 100
-    val autoRecord: Boolean = true,
-    val cooldownSeconds: Int = 10,
-    val alertSound: Boolean = false,
+    val autoRecord10s: Boolean = true,
+    val cooldownSeconds: Int = 8,
+    val alertSound: Boolean = true,
+    val sirenType: SirenType = SirenType.POLICE_WAIL,
     val activeZone: String = "FULL_FRAME" // "FULL_FRAME", "CENTER", "ENTRYWAY"
 )
 
 enum class RemoteAction {
     TOGGLE_TORCH,
+    TOGGLE_STROBE,
     SWITCH_CAMERA,
     ZOOM_IN,
     ZOOM_OUT,
+    SET_ZOOM_1X,
+    SET_ZOOM_2X,
+    SET_ZOOM_3X,
+    SET_ZOOM_5X,
     START_RECORDING,
     STOP_RECORDING,
+    RECORD_10S_CLIP,
     CAPTURE_SNAPSHOT,
     SET_QUALITY_LOW,
     SET_QUALITY_BALANCED,
     SET_QUALITY_HIGH,
-    TRIGGER_SIREN
+    TRIGGER_SIREN_1,
+    TRIGGER_SIREN_2,
+    TRIGGER_SIREN_3,
+    TRIGGER_SIREN_4,
+    TRIGGER_SIREN_5,
+    TRIGGER_SIREN_6,
+    TRIGGER_SIREN_7,
+    TRIGGER_SIREN_8,
+    STOP_SIREN,
+    TOGGLE_PRIVACY_MODE,
+    TOGGLE_NIGHT_VISION
 }

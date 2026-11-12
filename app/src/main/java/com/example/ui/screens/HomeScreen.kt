@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,10 +21,7 @@ import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Laptop
 import androidx.compose.material.icons.filled.MotionPhotosOn
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.Wifi
@@ -42,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -54,7 +49,6 @@ import com.example.TwinGuardApp
 import com.example.network.NetworkUtils
 import com.example.ui.components.CctvTopBar
 import com.example.ui.components.StatusBadge
-import com.example.ui.theme.AccentBlue
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.BorderColor
 import com.example.ui.theme.DarkBackground
@@ -89,7 +83,7 @@ fun HomeScreen(
         topBar = {
             CctvTopBar(
                 title = "TwinGuard CCTV",
-                subtitle = "Offline Security Camera System v2.0",
+                subtitle = "Material You Surveillance Hub v2.0",
                 actions = {
                     IconButton(
                         onClick = onNavigateToDiagnostics,
@@ -122,30 +116,30 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { Spacer(modifier = Modifier.height(4.dp)) }
+            item { Spacer(modifier = Modifier.height(2.dp)) }
 
-            // Network & Status Banner
+            // Material You Status & Connectivity Card
             item {
                 Surface(
                     color = DarkSurface,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(24.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(14.dp),
+                            .padding(horizontal = 18.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(42.dp)
                                     .clip(CircleShape)
                                     .background(DarkSurfaceElevated),
                                 contentAlignment = Alignment.Center
@@ -154,7 +148,7 @@ fun HomeScreen(
                                     imageVector = Icons.Default.Wifi,
                                     contentDescription = "Network",
                                     tint = AccentCyan,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                             Column {
@@ -181,14 +175,14 @@ fun HomeScreen(
                 }
             }
 
-            // Section Header
+            // Mode Section
             item {
                 Text(
-                    text = "SELECT OPERATING MODE",
-                    fontSize = 12.sp,
+                    text = "OPERATING SURVEILLANCE MODES",
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = AccentCyan,
-                    letterSpacing = 1.sp,
+                    letterSpacing = 1.2.sp,
                     modifier = Modifier.padding(start = 4.dp, top = 4.dp)
                 )
             }
@@ -197,8 +191,8 @@ fun HomeScreen(
             item {
                 ModeCard(
                     title = "CAMERA MODE",
-                    subtitle = "Transform this Android phone into a standalone wireless CCTV camera.",
-                    tagline = "Local streaming • On-device motion detection • Continuous MP4 recording",
+                    subtitle = "Transform this phone into an autonomous wireless CCTV security camera.",
+                    tagline = "24/7 background stream • Human motion detection • 10s auto-clips • 8 Sirens",
                     icon = Icons.Default.CameraAlt,
                     accentColor = AccentCyan,
                     badgeText = "CAMERA HOST",
@@ -212,7 +206,7 @@ fun HomeScreen(
                 ModeCard(
                     title = "MONITOR MODE",
                     subtitle = "Connect to another phone and watch its live camera stream in real time.",
-                    tagline = "QR auto-pairing • Remote PTZ controls • Two-way audio • PiP",
+                    tagline = "QR auto-pairing • PTZ zoom presets • Human alerts • Walkie-talkie",
                     icon = Icons.Default.Videocam,
                     accentColor = SecurityGreen,
                     badgeText = "CCTV VIEWER",
@@ -226,7 +220,7 @@ fun HomeScreen(
                 ModeCard(
                     title = "LAPTOP VIEWER",
                     subtitle = "Monitor the camera live through Chrome or Edge on any laptop or desktop.",
-                    tagline = "Direct LAN web dashboard • Zero software install • Full control panel",
+                    tagline = "Direct LAN cyber dashboard • Full 8-siren controls • Zero software install",
                     icon = Icons.Default.Laptop,
                     accentColor = WarningAmber,
                     badgeText = "WEB BROWSER",
@@ -235,19 +229,19 @@ fun HomeScreen(
                 )
             }
 
-            // Section Header
+            // Media Vault Section
             item {
                 Text(
-                    text = "SURVEILLANCE VAULT",
-                    fontSize = 12.sp,
+                    text = "SURVEILLANCE ARCHIVE",
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextSecondary,
-                    letterSpacing = 1.sp,
-                    modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+                    letterSpacing = 1.2.sp,
+                    modifier = Modifier.padding(start = 4.dp, top = 6.dp)
                 )
             }
 
-            // Quick Access Cards: Recordings & Motion Events
+            // Quick Access Cards
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -263,7 +257,7 @@ fun HomeScreen(
                     )
                     VaultCard(
                         title = "Motion Events",
-                        subtitle = "Trigger logs & snaps",
+                        subtitle = "10s clips & snaps",
                         icon = Icons.Default.MotionPhotosOn,
                         testTag = "vault_motion_button",
                         modifier = Modifier.weight(1f),
@@ -289,7 +283,7 @@ fun ModeCard(
     onClick: () -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = DarkSurface),
         border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
         modifier = Modifier
@@ -297,7 +291,7 @@ fun ModeCard(
             .testTag(testTag)
             .clickable(onClick = onClick)
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -305,14 +299,13 @@ fun ModeCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(accentColor.copy(alpha = 0.15f))
-                            .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(accentColor.copy(alpha = 0.16f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -342,11 +335,11 @@ fun ModeCard(
                 lineHeight = 20.sp
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Surface(
                 color = DarkSurfaceElevated,
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
@@ -354,7 +347,7 @@ fun ModeCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = AccentCyan,
                     fontSize = 11.sp,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                 )
             }
         }
@@ -371,7 +364,7 @@ fun VaultCard(
     onClick: () -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = DarkSurface),
         border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
         modifier = modifier
@@ -379,14 +372,14 @@ fun VaultCard(
             .clickable(onClick = onClick)
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(DarkSurfaceElevated),
                 contentAlignment = Alignment.Center
             ) {
@@ -394,7 +387,7 @@ fun VaultCard(
                     imageVector = icon,
                     contentDescription = title,
                     tint = AccentCyan,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
             Column {

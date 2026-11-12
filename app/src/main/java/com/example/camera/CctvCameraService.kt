@@ -8,12 +8,19 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 
 class CctvCameraService : Service() {
+
+    private val tag = "CctvCameraService"
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var wifiLock: WifiManager.WifiLock? = null
 
     companion object {
         const val CHANNEL_ID = "twinguard_cctv_stream"
@@ -27,6 +34,51 @@ class CctvCameraService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        acquireLocks()
+    }
+
+    private fun acquireLocks() {
+        try {
+            // Keep CPU alive 24/7 without throttling
+            val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+            wakeLock = powerManager?.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "TwinGuard::CctvContinuousStreamWakeLock"
+            )?.apply {
+                setReferenceCounted(false)
+                acquire(24 * 60 * 60 * 1000L) // 24 hours lock
+            }
+
+            // Prevent Wi-Fi sleep or throttle
+            val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+            wifiLock = wifiManager?.createWifiLock(
+                WifiManager.WIFI_MODE_FULL_HIGH_PERF,
+                "TwinGuard::CctvWifiLock"
+            )?.apply {
+                setReferenceCounted(false)
+                acquire()
+            }
+            Log.d(tag, "WakeLock and WifiLock acquired for 24/7 uninterrupted streaming")
+        } catch (e: Exception) {
+            Log.e(tag, "Error acquiring locks", e)
+        }
+    }
+
+    private fun releaseLocks() {
+        try {
+            if (wakeLock?.isHeld == true) {
+                wakeLock?.release()
+            }
+            wakeLock = null
+
+            if (wifiLock?.isHeld == true) {
+                wifiLock?.release()
+            }
+            wifiLock = null
+            Log.d(tag, "WakeLock and WifiLock released")
+        } catch (e: Exception) {
+            Log.e(tag, "Error releasing locks", e)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -61,6 +113,7 @@ class CctvCameraService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        releaseLocks()
         isRunning = false
     }
 
@@ -84,8 +137,8 @@ class CctvCameraService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("TwinGuard CCTV — Active Stream")
-            .setContentText("Camera active at http://$address • Tap to view")
+            .setContentTitle("TwinGuard CCTV — Uninterrupted Stream")
+            .setContentText("Live at http://$address • 24/7 Background active")
             .setSmallIcon(android.R.drawable.ic_menu_camera)
             .setContentIntent(openPendingIntent)
             .setOngoing(true)

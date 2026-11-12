@@ -186,8 +186,12 @@ class MonitorClient(
                                 bitrateKbps = json.optInt("bitrateKbps", 2400),
                                 isRecording = json.optBoolean("isRecording", false),
                                 isTorchOn = json.optBoolean("isTorchOn", false),
+                                isStrobeActive = json.optBoolean("isStrobeActive", false),
                                 isFrontCamera = json.optBoolean("isFrontCamera", false),
                                 isMotionDetected = json.optBoolean("isMotionDetected", false),
+                                isHumanMotion = json.optBoolean("isHumanMotion", false),
+                                zoomLevel = json.optDouble("zoomLevel", 1.0).toFloat(),
+                                isPrivacyMode = json.optBoolean("isPrivacyMode", false),
                                 recordingDurationSec = json.optLong("recordingDurationSec", 0)
                             )
                         }

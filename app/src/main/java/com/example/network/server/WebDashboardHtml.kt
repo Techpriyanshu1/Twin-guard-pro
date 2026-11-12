@@ -12,37 +12,42 @@ object WebDashboardHtml {
     <title>TwinGuard CCTV — $cameraName</title>
     <style>
         :root {
-            --bg-color: #090d16;
-            --surface-color: #111827;
-            --surface-elevated: #1e293b;
-            --accent-cyan: #38bdf8;
-            --accent-blue: #0284c7;
+            --md-bg: #0e141b;
+            --md-surface: #121922;
+            --md-surface-variant: #1d2633;
+            --md-primary: #7ed0ff;
+            --md-on-primary: #00344f;
+            --md-primary-container: #004c70;
+            --md-secondary: #62dcb6;
+            --md-tertiary: #ffb77c;
+            --md-error: #ffb4ab;
+            --md-error-container: #93000a;
+            --md-outline: #323f52;
+            --md-text: #dee3eb;
+            --md-text-muted: #8b99ac;
             --green: #10b981;
             --red: #ef4444;
             --amber: #f59e0b;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --border-color: #24334b;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            font-family: system-ui, -apple-system, Roboto, "Segoe UI", sans-serif;
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-primary);
+            background-color: var(--md-bg);
+            color: var(--md-text);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
         header {
-            background-color: var(--surface-color);
-            border-bottom: 1px solid var(--border-color);
+            background-color: var(--md-surface);
+            border-bottom: 1px solid var(--md-outline);
             padding: 14px 24px;
             display: flex;
             align-items: center;
@@ -56,39 +61,27 @@ object WebDashboardHtml {
         }
 
         .brand-badge {
-            background: linear-gradient(135deg, #0284c7, #38bdf8);
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
+            background: linear-gradient(135deg, #004c70, #7ed0ff);
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 800;
             color: #000;
             font-size: 16px;
-            box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
-        }
-
-        .brand-text h1 {
-            font-size: 18px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-
-        .brand-text p {
-            font-size: 12px;
-            color: var(--text-secondary);
         }
 
         .status-pill {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border-radius: 20px;
-            background: rgba(16, 185, 129, 0.15);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            color: var(--green);
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 24px;
+            background: rgba(98, 220, 182, 0.15);
+            border: 1px solid var(--md-secondary);
+            color: var(--md-secondary);
             font-size: 13px;
             font-weight: 600;
         }
@@ -97,15 +90,32 @@ object WebDashboardHtml {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background-color: var(--green);
-            box-shadow: 0 0 8px var(--green);
+            background-color: var(--md-secondary);
+            box-shadow: 0 0 8px var(--md-secondary);
             animation: pulse 1.5s infinite;
         }
 
         @keyframes pulse {
             0% { opacity: 0.6; }
-            50% { opacity: 1; transform: scale(1.1); }
+            50% { opacity: 1; transform: scale(1.15); }
             100% { opacity: 0.6; }
+        }
+
+        .alert-banner {
+            display: none;
+            background: linear-gradient(90deg, #93000a, #ba1a1a);
+            color: #fff;
+            padding: 12px 24px;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 700;
+            animation: flashAlert 1s infinite alternate;
+        }
+
+        @keyframes flashAlert {
+            from { background-color: #93000a; }
+            to { background-color: #ba1a1a; }
         }
 
         .main-container {
@@ -115,10 +125,8 @@ object WebDashboardHtml {
             gap: 20px;
         }
 
-        @media (max-width: 900px) {
-            .main-container {
-                flex-direction: column;
-            }
+        @media (max-width: 960px) {
+            .main-container { flex-direction: column; }
         }
 
         .video-section {
@@ -131,14 +139,14 @@ object WebDashboardHtml {
         .video-container {
             position: relative;
             background-color: #000;
-            border-radius: 16px;
+            border-radius: 20px;
             overflow: hidden;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            border: 1px solid var(--md-outline);
             aspect-ratio: 16 / 9;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 12px 36px rgba(0,0,0,0.7);
         }
 
         #liveFeed {
@@ -146,22 +154,6 @@ object WebDashboardHtml {
             height: 100%;
             object-fit: contain;
             background-color: #000;
-        }
-
-        .rec-indicator {
-            position: absolute;
-            top: 16px;
-            left: 16px;
-            display: none;
-            align-items: center;
-            gap: 6px;
-            background: rgba(239, 68, 68, 0.85);
-            color: #fff;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 700;
-            backdrop-filter: blur(4px);
         }
 
         .hud-overlay {
@@ -176,52 +168,45 @@ object WebDashboardHtml {
         }
 
         .hud-chip {
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(8px);
+            background: rgba(18, 25, 34, 0.85);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 8px 14px;
-            border-radius: 8px;
+            padding: 8px 16px;
+            border-radius: 14px;
             font-size: 12px;
             display: flex;
-            gap: 12px;
+            gap: 14px;
             pointer-events: auto;
         }
 
-        .hud-item {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .hud-item span.label {
-            font-size: 10px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-        }
-
-        .hud-item span.value {
-            font-weight: 700;
-            color: var(--accent-cyan);
-            font-size: 13px;
-        }
+        .hud-item { display: flex; flex-direction: column; }
+        .hud-item .label { font-size: 10px; color: var(--md-text-muted); text-transform: uppercase; }
+        .hud-item .value { font-weight: 700; color: var(--md-primary); font-size: 13px; }
 
         .control-panel {
-            background-color: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 16px;
+            background-color: var(--md-surface);
+            border: 1px solid var(--md-outline);
+            border-radius: 20px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .btn-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 10px;
             align-items: center;
         }
 
         .btn {
-            background-color: var(--surface-elevated);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            padding: 10px 18px;
-            border-radius: 10px;
-            font-size: 14px;
+            background-color: var(--md-surface-variant);
+            color: var(--md-text);
+            border: 1px solid var(--md-outline);
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             display: inline-flex;
@@ -231,20 +216,20 @@ object WebDashboardHtml {
         }
 
         .btn:hover {
-            background-color: #293548;
-            border-color: var(--accent-cyan);
+            background-color: #263345;
+            border-color: var(--md-primary);
         }
 
-        .btn.active {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-            color: #000;
-            border: none;
+        .btn-primary {
+            background-color: var(--md-primary-container);
+            color: var(--md-primary);
+            border-color: var(--md-primary);
         }
 
         .btn-danger {
-            background-color: rgba(239, 68, 68, 0.2);
-            color: var(--red);
-            border-color: rgba(239, 68, 68, 0.4);
+            background-color: var(--md-error-container);
+            color: var(--md-error);
+            border-color: var(--red);
         }
 
         .btn-danger:hover {
@@ -254,29 +239,26 @@ object WebDashboardHtml {
 
         .sidebar {
             flex: 1;
-            min-width: 280px;
+            min-width: 320px;
             display: flex;
             flex-direction: column;
             gap: 16px;
         }
 
         .card {
-            background-color: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
+            background-color: var(--md-surface);
+            border: 1px solid var(--md-outline);
+            border-radius: 18px;
             padding: 18px;
         }
 
-        .card-header {
-            font-size: 14px;
+        .card-title {
+            font-size: 13px;
             font-weight: 700;
-            color: var(--accent-cyan);
+            color: var(--md-primary);
             margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            letter-spacing: 0.5px;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .stat-grid {
@@ -286,63 +268,51 @@ object WebDashboardHtml {
         }
 
         .stat-box {
-            background-color: var(--surface-elevated);
-            padding: 10px 12px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.05);
+            background-color: var(--md-surface-variant);
+            padding: 10px 14px;
+            border-radius: 12px;
         }
 
-        .stat-box .title {
-            font-size: 11px;
-            color: var(--text-secondary);
-        }
+        .stat-box .title { font-size: 11px; color: var(--md-text-muted); }
+        .stat-box .num { font-size: 16px; font-weight: 700; margin-top: 4px; color: var(--md-text); }
 
-        .stat-box .num {
-            font-size: 16px;
-            font-weight: 700;
-            margin-top: 4px;
-            color: var(--text-primary);
-        }
-
-        .motion-alert {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px;
-            border-radius: 8px;
-            background: rgba(245, 158, 11, 0.1);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-            color: var(--amber);
-            font-size: 12px;
-            margin-top: 10px;
-        }
-
-        .event-list {
-            display: flex;
-            flex-direction: column;
+        .siren-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
-            max-height: 240px;
-            overflow-y: auto;
         }
 
-        .event-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .siren-btn {
+            background: var(--md-surface-variant);
+            border: 1px solid var(--md-outline);
+            color: var(--md-text);
             padding: 8px 10px;
-            border-radius: 8px;
-            background: var(--surface-elevated);
-            font-size: 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .siren-btn:hover {
+            background: #2b384c;
+            border-color: var(--red);
+            color: var(--red);
         }
     </style>
 </head>
 <body>
+    <div id="humanAlertBar" class="alert-banner">
+        <span>⚠️ <strong>HUMAN INTRUDER MOTION DETECTED</strong> — 10s Clip Recording & Snapshot Saved</span>
+        <button class="btn btn-danger" style="padding: 4px 12px;" onclick="sendCommand('TRIGGER_SIREN_1')">Sound Siren</button>
+    </div>
+
     <header>
         <div class="brand">
             <div class="brand-badge">TG</div>
-            <div class="brand-text">
-                <h1>$cameraName</h1>
-                <p>Offline Local CCTV • Direct LAN</p>
+            <div>
+                <h1 style="font-size: 18px;">$cameraName</h1>
+                <p style="font-size: 12px; color: var(--md-text-muted);">Material You CCTV Hub • Offline LAN</p>
             </div>
         </div>
         <div class="status-pill">
@@ -356,7 +326,6 @@ object WebDashboardHtml {
         <div class="video-section">
             <div class="video-container" id="videoWrapper">
                 <img id="liveFeed" src="/stream?token=$token" alt="TwinGuard Live Feed" onerror="handleStreamError()" />
-                <div class="rec-indicator" id="recBadge">● REC <span id="recTimer">00:00</span></div>
 
                 <div class="hud-overlay">
                     <div class="hud-chip">
@@ -372,6 +341,10 @@ object WebDashboardHtml {
                             <span class="label">Bitrate</span>
                             <span class="value" id="hudBitrate">2.4 Mbps</span>
                         </div>
+                        <div class="hud-item">
+                            <span class="label">Zoom</span>
+                            <span class="value" id="hudZoom">1.0x</span>
+                        </div>
                     </div>
                     <div class="hud-chip">
                         <div class="hud-item">
@@ -382,42 +355,55 @@ object WebDashboardHtml {
                 </div>
             </div>
 
-            <!-- CCTV Quick Controls -->
+            <!-- Enhanced Controls Panel -->
             <div class="control-panel">
-                <button class="btn" id="btnTorch" onclick="sendCommand('TOGGLE_TORCH')">
-                    🔦 Flashlight
-                </button>
-                <button class="btn" id="btnFlip" onclick="sendCommand('SWITCH_CAMERA')">
-                    🔄 Flip Camera
-                </button>
-                <button class="btn" id="btnZoomIn" onclick="sendCommand('ZOOM_IN')">
-                    🔍 Zoom +
-                </button>
-                <button class="btn" id="btnZoomOut" onclick="sendCommand('ZOOM_OUT')">
-                    🔍 Zoom -
-                </button>
-                <button class="btn" id="btnSnapshot" onclick="captureSnapshot()">
-                    📸 Snapshot
-                </button>
-                <button class="btn btn-danger" id="btnRec" onclick="toggleRecording()">
-                    🔴 Instant Record
-                </button>
-                <button class="btn" id="btnSiren" onclick="sendCommand('TRIGGER_SIREN')">
-                    🚨 Siren Alarm
-                </button>
-                <button class="btn" onclick="toggleFullScreen()">
-                    ⛶ Fullscreen
-                </button>
+                <div class="btn-row">
+                    <button class="btn" onclick="sendCommand('TOGGLE_TORCH')">🔦 Flashlight</button>
+                    <button class="btn" onclick="sendCommand('TOGGLE_STROBE')">⚡ Strobe Deterrent</button>
+                    <button class="btn" onclick="sendCommand('SWITCH_CAMERA')">🔄 Flip Lens</button>
+                    <button class="btn" onclick="sendCommand('CAPTURE_SNAPSHOT')">📸 Snapshot</button>
+                    <button class="btn btn-primary" onclick="sendCommand('RECORD_10S_CLIP')">⏱ Record 10s Clip</button>
+                    <button class="btn btn-danger" id="btnRec" onclick="toggleRecording()">🔴 Continuous Record</button>
+                    <button class="btn" onclick="sendCommand('TOGGLE_PRIVACY_MODE')">🔒 Privacy Mode</button>
+                    <button class="btn" onclick="toggleFullScreen()">⛶ Fullscreen</button>
+                </div>
+
+                <!-- Zoom Presets -->
+                <div class="btn-row" style="align-items: center;">
+                    <span style="font-size: 12px; color: var(--md-text-muted); font-weight: 700;">PTZ ZOOM:</span>
+                    <button class="btn" style="padding: 6px 12px;" onclick="sendCommand('SET_ZOOM_1X')">1x</button>
+                    <button class="btn" style="padding: 6px 12px;" onclick="sendCommand('SET_ZOOM_2X')">2x</button>
+                    <button class="btn" style="padding: 6px 12px;" onclick="sendCommand('SET_ZOOM_3X')">3x</button>
+                    <button class="btn" style="padding: 6px 12px;" onclick="sendCommand('SET_ZOOM_5X')">5x</button>
+                    <button class="btn" style="padding: 6px 12px;" onclick="sendCommand('ZOOM_IN')">Zoom +</button>
+                    <button class="btn" style="padding: 6px 12px;" onclick="sendCommand('ZOOM_OUT')">Zoom -</button>
+                </div>
             </div>
         </div>
 
-        <!-- Sidebar Diagnostics & Camera Info -->
+        <!-- Sidebar -->
         <div class="sidebar">
+            <!-- 8 Siren Types Deterrent Panel -->
             <div class="card">
-                <div class="card-header">
-                    <span>Camera Telemetry</span>
-                    <span style="font-size: 11px; color: var(--green);">ONLINE</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span class="card-title" style="margin-bottom:0;">🚨 8 Siren Types</span>
+                    <button class="btn btn-danger" style="padding: 4px 10px; font-size: 11px;" onclick="sendCommand('STOP_SIREN')">Silence Alarm</button>
                 </div>
+                <div class="siren-grid">
+                    <button class="siren-btn" onclick="sendCommand('TRIGGER_SIREN_1')">1. Police Wail</button>
+                    <button class="siren-btn" onclick="sendCommand('TRIGGER_SIREN_2')">2. Rapid Yelp</button>
+                    <button class="siren-btn" onclick="sendCommand('TRIGGER_SIREN_3')">3. Hi-Lo Two-Tone</button>
+                    <button class="siren-btn" onclick="sendCommand('TRIGGER_SIREN_4')">4. Piercing Intruder</button>
+                    <button class="siren-btn" onclick="sendCommand('TRIGGER_SIREN_5')">5. Air Raid Rumble</button>
+                    <button class="siren-btn" onclick="sendCommand('TRIGGER_SIREN_6')">6. Cyber Alarm</button>
+                    <button class="siren-btn" onclick="sendCommand('TRIGGER_SIREN_7')">7. Guard Pulse</button>
+                    <button class="siren-btn" onclick="sendCommand('TRIGGER_SIREN_8')">8. Ultrasonic Chirp</button>
+                </div>
+            </div>
+
+            <!-- Camera Telemetry -->
+            <div class="card">
+                <div class="card-title">Camera Hardware Telemetry</div>
                 <div class="stat-grid">
                     <div class="stat-box">
                         <div class="title">Battery</div>
@@ -428,7 +414,7 @@ object WebDashboardHtml {
                         <div class="num" id="statTemp">-- °C</div>
                     </div>
                     <div class="stat-box">
-                        <div class="title">Storage Free</div>
+                        <div class="title">Free Storage</div>
                         <div class="num" id="statStorage">-- GB</div>
                     </div>
                     <div class="stat-box">
@@ -436,28 +422,15 @@ object WebDashboardHtml {
                         <div class="num" id="statViewers">1</div>
                     </div>
                 </div>
-
-                <div id="motionAlertBox" class="motion-alert" style="display: none;">
-                    ⚠️ <strong>MOTION DETECTED</strong> in monitoring area
-                </div>
             </div>
 
+            <!-- Stream Profile -->
             <div class="card">
-                <div class="card-header">Stream Profile</div>
+                <div class="card-title">Stream Resolution Profile</div>
                 <div style="display: flex; gap: 8px;">
-                    <button class="btn" style="flex:1; padding:8px;" onclick="sendCommand('SET_QUALITY_LOW')">480p</button>
-                    <button class="btn active" style="flex:1; padding:8px;" onclick="sendCommand('SET_QUALITY_BALANCED')">720p</button>
-                    <button class="btn" style="flex:1; padding:8px;" onclick="sendCommand('SET_QUALITY_HIGH')">1080p</button>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">Local Network Info</div>
-                <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.6;">
-                    <div><strong>Camera IP:</strong> $serverIp:$serverPort</div>
-                    <div><strong>Protocol:</strong> HTTP/1.1 Low-Latency Stream</div>
-                    <div><strong>Encryption:</strong> Local-Only WPA2/P2P</div>
-                    <div><strong>Internet:</strong> Not required (100% Offline)</div>
+                    <button class="btn" style="flex:1; padding:8px;" onclick="sendCommand('SET_QUALITY_LOW')">480p SD</button>
+                    <button class="btn btn-primary" style="flex:1; padding:8px;" onclick="sendCommand('SET_QUALITY_BALANCED')">720p HD</button>
+                    <button class="btn" style="flex:1; padding:8px;" onclick="sendCommand('SET_QUALITY_HIGH')">1080p FHD</button>
                 </div>
             </div>
         </div>
@@ -473,9 +446,7 @@ object WebDashboardHtml {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: action })
             }).then(r => r.json()).then(data => {
-                if (data.status === 'ok') {
-                    updateTelemetry();
-                }
+                if (data.status === 'ok') updateTelemetry();
             }).catch(e => console.error("Command error:", e));
         }
 
@@ -485,10 +456,6 @@ object WebDashboardHtml {
             } else {
                 sendCommand('START_RECORDING');
             }
-        }
-
-        function captureSnapshot() {
-            window.open('/snapshot?token=' + TOKEN, '_blank');
         }
 
         function toggleFullScreen() {
@@ -519,6 +486,7 @@ object WebDashboardHtml {
                     document.getElementById("hudFps").innerText = data.currentFps.toFixed(1);
                     document.getElementById("hudBitrate").innerText = (data.bitrateKbps / 1000).toFixed(1) + " Mbps";
                     document.getElementById("hudQuality").innerText = data.quality;
+                    document.getElementById("hudZoom").innerText = data.zoomLevel ? data.zoomLevel.toFixed(1) + "x" : "1.0x";
                     document.getElementById("statBattery").innerText = data.batteryPercent + "%" + (data.isCharging ? " ⚡" : "");
                     document.getElementById("statTemp").innerText = data.temperatureCelsius + "°C";
                     document.getElementById("statStorage").innerText = (data.freeStorageMb / 1024).toFixed(1) + " GB";
@@ -526,25 +494,19 @@ object WebDashboardHtml {
 
                     // Recording indicator
                     isRecording = data.isRecording;
-                    const recBadge = document.getElementById("recBadge");
                     const btnRec = document.getElementById("btnRec");
                     if (data.isRecording) {
-                        recBadge.style.display = "flex";
-                        const mins = Math.floor(data.recordingDurationSec / 60).toString().padStart(2, '0');
-                        const secs = (data.recordingDurationSec % 60).toString().padStart(2, '0');
-                        document.getElementById("recTimer").innerText = mins + ":" + secs;
-                        btnRec.innerText = "⏹ Stop Record";
+                        btnRec.innerText = "⏹ Stop Record (" + data.recordingDurationSec + "s)";
                     } else {
-                        recBadge.style.display = "none";
-                        btnRec.innerText = "🔴 Instant Record";
+                        btnRec.innerText = "🔴 Continuous Record";
                     }
 
-                    // Motion alert
-                    const motionBox = document.getElementById("motionAlertBox");
-                    if (data.isMotionDetected) {
-                        motionBox.style.display = "flex";
+                    // Human Motion Alert Banner
+                    const alertBar = document.getElementById("humanAlertBar");
+                    if (data.isHumanMotion || data.isMotionDetected) {
+                        alertBar.style.display = "flex";
                     } else {
-                        motionBox.style.display = "none";
+                        alertBar.style.display = "none";
                     }
                 })
                 .catch(err => {
@@ -552,8 +514,7 @@ object WebDashboardHtml {
                 });
         }
 
-        // Poll telemetry every 1.5 seconds
-        setInterval(updateTelemetry, 1500);
+        setInterval(updateTelemetry, 1400);
         updateTelemetry();
     </script>
 </body>

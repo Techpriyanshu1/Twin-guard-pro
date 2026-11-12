@@ -1,13 +1,12 @@
 package com.example.motion
 
 import android.graphics.Bitmap
-import android.graphics.Rect
 import com.example.data.model.MotionZoneConfig
 import java.io.ByteArrayOutputStream
 
 class MotionDetectionEngine(
     private var config: MotionZoneConfig = MotionZoneConfig(),
-    private val onMotionTriggered: (motionScore: Int, zone: String, snapshotBytes: ByteArray) -> Unit
+    private val onMotionTriggered: (motionScore: Int, zone: String, isHuman: Boolean, snapshotBytes: ByteArray) -> Unit
 ) {
     private var lastFrameTime = 0L
     private var lastTriggerTime = 0L
@@ -40,7 +39,6 @@ class MotionDetectionEngine(
                     for (by in 0 until blockH) {
                         for (bx in 0 until blockW) {
                             val px = small.getPixel(gx * blockW + bx, gy * blockH + by)
-                            // Luminance formula
                             val r = (px shr 16) and 0xFF
                             val g = (px shr 8) and 0xFF
                             val b = px and 0xFF
@@ -56,10 +54,14 @@ class MotionDetectionEngine(
             previousGrid = currentGrid
             if (prev == null) return
 
-            // Calculate differential motion score per block
             var motionBlocks = 0
             var activeZoneBlocks = 0
-            val threshold = (100 - config.sensitivity).coerceIn(10, 80) // Higher sensitivity = lower threshold
+            val threshold = (100 - config.sensitivity).coerceIn(10, 80)
+
+            var minX = gridCols
+            var maxX = 0
+            var minY = gridRows
+            var maxY = 0
 
             for (gy in 0 until gridRows) {
                 for (gx in 0 until gridCols) {
@@ -70,6 +72,10 @@ class MotionDetectionEngine(
                     val diff = Math.abs(currentGrid[idx] - prev[idx])
                     if (diff > threshold) {
                         motionBlocks++
+                        if (gx < minX) minX = gx
+                        if (gx > maxX) maxX = gx
+                        if (gy < minY) minY = gy
+                        if (gy > maxY) maxY = gy
                     }
                 }
             }
@@ -77,15 +83,21 @@ class MotionDetectionEngine(
             if (activeZoneBlocks == 0) activeZoneBlocks = 1
             val motionPercent = (motionBlocks * 100) / activeZoneBlocks
 
-            // Trigger criteria: at least 3 blocks changed or motionPercent > 12%
+            // Human detection criteria:
+            // Walking/standing human creates a vertical aspect ratio: vertical span >= 2 blocks and vertical span >= horizontal span
+            val heightSpan = if (maxY >= minY) (maxY - minY + 1) else 0
+            val widthSpan = if (maxX >= minX) (maxX - minX + 1) else 0
+            val isHumanMotion = (heightSpan >= 2 && heightSpan >= widthSpan && motionBlocks >= 3)
+
+            // Trigger criteria: at least 3 blocks changed or motionPercent >= 12%
             if (motionBlocks >= 3 && motionPercent >= 12) {
                 val cooldownMs = config.cooldownSeconds * 1000L
                 if (now - lastTriggerTime > cooldownMs) {
                     lastTriggerTime = now
                     val stream = ByteArrayOutputStream()
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream)
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, stream)
                     val snapshotBytes = stream.toByteArray()
-                    onMotionTriggered(motionPercent, config.activeZone, snapshotBytes)
+                    onMotionTriggered(motionPercent, config.activeZone, isHumanMotion, snapshotBytes)
                 }
             }
         } catch (e: Exception) {
