@@ -1,0 +1,6 @@
+{
+  "name": "TwinGuard CCTV",
+  "description": "Smart Offline Security Camera & Real-Time Local Monitor with Laptop Browser Viewer",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
